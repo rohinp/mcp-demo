@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather & Forecast MCP Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+        .weather-card, .forecast-card, .advisory-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .weather-card h3, .forecast-card h3, .advisory-card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .weather-info {
+            display: flex;
+            align-items: center;
+        }
+        .weather-icon {
+            font-size: 48px;
+            margin-right: 20px;
+        }
+        .forecast-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .forecast-item:last-child {
+            border-bottom: none;
+        }
+        .error {
+            color: #e74c3c;
+            background-color: #fadbd8;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .loading {
+            text-align: center;
+            display: none;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .server-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            font-size: 14px;
+        }
+        
+        .advisory-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        
+        .advisory-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .advisory-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .safety-level {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .safety-high {
+            background-color: #d5f5e3;
+            color: #27ae60;
+        }
+        
+        .safety-moderate {
+            background-color: #fef9e7;
+            color: #f39c12;
+        }
+        
+        .safety-low {
+            background-color: #fadbd8;
+            color: #e74c3c;
+        }
+        .server-status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            background-color: #eee;
+            margin-right: 10px;
+        }
+        .server-status.online {
+            background-color: #d5f5e3;
+            color: #27ae60;
+        }
+        .server-status.offline {
+            background-color: #fadbd8;
+            color: #e74c3c;
+        }
+        .architecture-diagram {
+            margin-top: 40px;
+            text-align: center;
+        }
+        .architecture-diagram img {
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Weather & Forecast MCP Demo</h1>
+    
+    <div class="container">
+        <div class="form-group">
+            <label for="city">Enter City:</label>
+            <input type="text" id="city" name="city" placeholder="e.g., Amsterdam, London, New York">
+        </div>
+        <button id="submit-btn">Get Weather & Forecast</button>
+        
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Fetching data from services...</p>
+        </div>
+        
+        <div class="results">
+            <div id="errors"></div>
+            
+            <div class="weather-card">
+                <h3>Current Weather</h3>
+                <div id="weather-data">
+                    <!-- Weather data will be inserted here -->
+                </div>
+            </div>
+            
+            <div class="forecast-card">
+                <h3>3-Day Forecast</h3>
+                <div id="forecast-data">
+                    <!-- Forecast data will be inserted here -->
+                </div>
+            </div>
+            
+            <div class="advisory-card">
+                <h3>Travel Advisory</h3>
+                <div id="advisory-data">
+                    <!-- Advisory data will be inserted here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="server-info">
+            <div>
+                <span>Weather Service: </span>
+                <span id="weather-service-status" class="server-status">Unknown</span>
+            </div>
+            <div>
+                <span>Forecast Service: </span>
+                <span id="forecast-service-status" class="server-status">Unknown</span>
+            </div>
+            <div>
+                <span>Advisory Service: </span>
+                <span id="advisory-service-status" class="server-status">Unknown</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="architecture-diagram">
+        <h3>MCP Architecture</h3>
+        <pre>
+┌─────────────┐     ┌───────────────────┐     ┌─────────────────┐
+│             │     │                   │     │                 │
+│  Client App │────▶│  Weather Service  │     │ Forecast Service│
+│  (Port 8080)│     │    (Port 8000)    │     │   (Port 8001)   │
+│             │     │                   │     │                 │
+└─────────────┘     └───────────────────┘     └─────────────────┘
+        │                    ▲                        ▲
+        │                    │                        │
+        └────────────────────┼────────────────────────┘
+                             │                        
+                        ┌────┴────┐                   
+                        │         │                   
+                        │  Agent  │                   
+                        │         │                   
+                        └─────────┘                   
+        </pre>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const submitBtn = document.getElementById('submit-btn');
+            const cityInput = document.getElementById('city');
+            const resultsDiv = document.querySelector('.results');
+            const loadingDiv = document.querySelector('.loading');
+            const errorsDiv = document.getElementById('errors');
+            const weatherDataDiv = document.getElementById('weather-data');
+            const forecastDataDiv = document.getElementById('forecast-data');
+            const weatherServiceStatus = document.getElementById('weather-service-status');
+            const forecastServiceStatus = document.getElementById('forecast-service-status');
+            const advisoryServiceStatus = document.getElementById('advisory-service-status');
+            
+            // Check service status on page load
+            checkServiceStatus();
+            
+            // Set up periodic status check
+            setInterval(checkServiceStatus, 10000);
+            
+            submitBtn.addEventListener('click', async function() {
+                const city = cityInput.value.trim();
+                if (!city) {
+                    alert('Please enter a city name');
+                    return;
+                }
+                
+                // Show loading, hide results
+                loadingDiv.style.display = 'block';
+                resultsDiv.style.display = 'none';
+                errorsDiv.innerHTML = '';
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('city', city);
+                    
+                    const response = await fetch('/get_weather_info', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    // Hide loading
+                    loadingDiv.style.display = 'none';
+                    
+                    // Show errors if any
+                    if (data.errors && data.errors.length > 0) {
+                        errorsDiv.innerHTML = data.errors.map(error => 
+                            `<div class="error">${error}</div>`
+                        ).join('');
+                    }
+                    
+                    // Display weather data
+                    if (data.weather) {
+                        let weatherIcon = '☀️'; // Default sunny
+                        if (data.weather.condition.includes('rain') || data.weather.condition.includes('storm')) {
+                            weatherIcon = '🌧️';
+                        } else if (data.weather.condition.includes('cloud')) {
+                            weatherIcon = '⛅';
+                        } else if (data.weather.condition.includes('fog')) {
+                            weatherIcon = '🌫️';
+                        } else if (data.weather.condition.includes('snow')) {
+                            weatherIcon = '❄️';
+                        }
+                        
+                        weatherDataDiv.innerHTML = `
+                            <div class="weather-info">
+                                <div class="weather-icon">${weatherIcon}</div>
+                                <div>
+                                    <h2>${data.weather.city}</h2>
+                                    <p>Temperature: ${data.weather.temperature}</p>
+                                    <p>Condition: ${data.weather.condition}</p>
+                                    <small>Source: ${data.weather.source}</small>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        weatherDataDiv.innerHTML = '<p>Weather data not available</p>';
+                    }
+                    
+                    // Display forecast data
+                    if (data.forecast) {
+                        forecastDataDiv.innerHTML = `
+                            <h4>${data.forecast.city} - ${data.forecast.days} Day Forecast</h4>
+                            <div>
+                                ${data.forecast.forecast.map(item => 
+                                    `<div class="forecast-item">${item}</div>`
+                                ).join('')}
+                            </div>
+                            <small>Source: ${data.forecast.source}</small>
+                        `;
+                    } else {
+                        forecastDataDiv.innerHTML = '<p>Forecast data not available</p>';
+                    }
+                    
+                    // Display advisory data
+                    const advisoryDataDiv = document.getElementById('advisory-data');
+                    if (data.advisory) {
+                        let safetyClass = 'safety-moderate';
+                        if (data.advisory.safety_level.toLowerCase().includes('high')) {
+                            safetyClass = 'safety-high';
+                        } else if (data.advisory.safety_level.toLowerCase().includes('low')) {
+                            safetyClass = 'safety-low';
+                        }
+                        
+                        advisoryDataDiv.innerHTML = `
+                            <h4>${data.advisory.city} Travel Information</h4>
+                            <p>
+                                <span class="safety-level ${safetyClass}">Safety: ${data.advisory.safety_level}</span>
+                                Best time to visit: ${data.advisory.best_time_to_visit}
+                            </p>
+                            <h5>Travel Advisories:</h5>
+                            <ul class="advisory-list">
+                                ${data.advisory.advisories.map(item => 
+                                    `<li>• ${item}</li>`
+                                ).join('')}
+                            </ul>
+                            <small>Source: ${data.advisory.source}</small>
+                        `;
+                    } else {
+                        advisoryDataDiv.innerHTML = '<p>Travel advisory data not available</p>';
+                    }
+                    
+                    // Show results
+                    resultsDiv.style.display = 'block';
+                    
+                } catch (error) {
+                    loadingDiv.style.display = 'none';
+                    errorsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                    resultsDiv.style.display = 'block';
+                }
+            });
+            
+            async function checkServiceStatus() {
+                // Check weather service
+                try {
+                    console.log('Checking weather service health...');
+                    const weatherResponse = await fetch('http://localhost:8000/health', { 
+                        method: 'GET'
+                        // Using default cors mode to get actual response
+                    });
+                    
+                    if (weatherResponse.ok) {
+                        console.log('Weather service is online');
+                        weatherServiceStatus.textContent = 'Online';
+                        weatherServiceStatus.className = 'server-status online';
+                    } else {
+                        console.log('Weather service returned non-OK status:', weatherResponse.status);
+                        weatherServiceStatus.textContent = 'Error: ' + weatherResponse.status;
+                        weatherServiceStatus.className = 'server-status offline';
+                    }
+                } catch (error) {
+                    console.error('Error checking weather service:', error);
+                    weatherServiceStatus.textContent = 'Offline';
+                    weatherServiceStatus.className = 'server-status offline';
+                }
+                
+                // Check forecast service
+                try {
+                    console.log('Checking forecast service health...');
+                    const forecastResponse = await fetch('http://localhost:8001/health', { 
+                        method: 'GET'
+                        // Using default cors mode to get actual response
+                    });
+                    
+                    if (forecastResponse.ok) {
+                        console.log('Forecast service is online');
+                        forecastServiceStatus.textContent = 'Online';
+                        forecastServiceStatus.className = 'server-status online';
+                    } else {
+                        console.log('Forecast service returned non-OK status:', forecastResponse.status);
+                        forecastServiceStatus.textContent = 'Error: ' + forecastResponse.status;
+                        forecastServiceStatus.className = 'server-status offline';
+                    }
+                } catch (error) {
+                    console.error('Error checking forecast service:', error);
+                    forecastServiceStatus.textContent = 'Offline';
+                    forecastServiceStatus.className = 'server-status offline';
+                }
+                
+                // Check advisory service
+                try {
+                    console.log('Checking advisory service health...');
+                    const advisoryResponse = await fetch('http://localhost:8002/health', { 
+                        method: 'GET',
+                        // Using cors mode instead of no-cors to get actual response
+                        // no-cors mode doesn't allow reading the response
+                    });
+                    
+                    if (advisoryResponse.ok) {
+                        console.log('Advisory service is online');
+                        advisoryServiceStatus.textContent = 'Online';
+                        advisoryServiceStatus.className = 'server-status online';
+                    } else {
+                        console.log('Advisory service returned non-OK status:', advisoryResponse.status);
+                        advisoryServiceStatus.textContent = 'Error: ' + advisoryResponse.status;
+                        advisoryServiceStatus.className = 'server-status offline';
+                    }
+                } catch (error) {
+                    console.error('Error checking advisory service:', error);
+                    advisoryServiceStatus.textContent = 'Offline';
+                    advisoryServiceStatus.className = 'server-status offline';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
